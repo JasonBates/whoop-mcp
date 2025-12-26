@@ -1,10 +1,8 @@
 """WHOOP MCP Server - Expose WHOOP recovery data to Claude Desktop."""
 
 import asyncio
-import io
 
 from fastmcp import FastMCP
-from fastmcp.utilities.types import Image
 
 from whoop_mcp.client import WhoopClient, WhoopAuthError, WhoopAPIError
 
@@ -266,13 +264,15 @@ async def get_workouts(limit: int = 5) -> str:
 
 
 @mcp.tool()
-async def get_morning_briefing() -> Image | str:
+async def get_morning_briefing() -> str:
     """Get a visual morning briefing banner with today's key WHOOP metrics.
 
-    Returns a landscape dashboard image showing recovery, HRV, sleep,
-    and strain at a glance. Designed for quick morning check-ins.
+    Returns the file path to a landscape dashboard image showing recovery,
+    HRV, sleep, and strain at a glance. Designed for quick morning check-ins.
     """
     import matplotlib.pyplot as plt
+    import tempfile
+    import os
 
     try:
         client = WhoopClient()
@@ -329,14 +329,14 @@ async def get_morning_briefing() -> Image | str:
 
         plt.tight_layout(pad=0.5)
 
-        # Save to bytes
-        buffer = io.BytesIO()
-        fig.savefig(buffer, format='png', dpi=150,
+        # Save to temp file
+        temp_dir = tempfile.gettempdir()
+        file_path = os.path.join(temp_dir, "whoop_morning_briefing.png")
+        fig.savefig(file_path, format='png', dpi=150,
                    facecolor=fig.get_facecolor(), edgecolor='none')
-        buffer.seek(0)
         plt.close(fig)
 
-        return Image(data=buffer.read(), format="png")
+        return file_path
 
     except WhoopAuthError as e:
         return f"Authentication error: {e}. Run the token setup script."
