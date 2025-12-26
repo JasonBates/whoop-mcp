@@ -139,8 +139,9 @@ async def get_recovery_trend(days: int = 7) -> str:
                 date = record.created_at.strftime("%m/%d")
 
                 # Simple visualization
-                bar = "█" * (score // 10) + "░" * (10 - score // 10)
-                lines.append(f"{date}: {bar} {score}% (HRV: {hrv:.0f}ms)")
+                filled = int(score) // 10
+                bar = "█" * filled + "░" * (10 - filled)
+                lines.append(f"{date}: {bar} {score:.0f}% (HRV: {hrv:.0f}ms)")
             else:
                 date = record.created_at.strftime("%m/%d")
                 lines.append(f"{date}: [not scored]")
