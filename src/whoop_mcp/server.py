@@ -101,11 +101,11 @@ async def get_sleep_trend(days: int = 7) -> str:
     """Get sleep data for the last N days.
 
     Args:
-        days: Number of days to look back (default: 7, max: 14)
+        days: Number of days to look back (default: 7, max: 30)
 
     Shows sleep duration, efficiency, and performance trends.
     """
-    days = min(days, 14)
+    days = min(days, 30)
 
     try:
         client = WhoopClient()
@@ -159,11 +159,11 @@ async def get_recovery_trend(days: int = 7) -> str:
     """Get recovery scores for the last N days.
 
     Args:
-        days: Number of days to look back (default: 7, max: 14)
+        days: Number of days to look back (default: 7, max: 30)
 
     Shows the trend of your recovery to help identify patterns.
     """
-    days = min(days, 14)  # Cap at 14 days
+    days = min(days, 30)
 
     try:
         client = WhoopClient()

@@ -112,10 +112,36 @@ class WhoopClient:
 
             return response.json()
 
+    async def _paginated_request(
+        self,
+        endpoint: str,
+        limit: int,
+        max_per_page: int = 25,
+    ) -> list[dict]:
+        """Fetch paginated results up to the requested limit."""
+        all_records = []
+        next_token = None
+
+        while len(all_records) < limit:
+            page_limit = min(max_per_page, limit - len(all_records))
+            params = {"limit": page_limit}
+            if next_token:
+                params["nextToken"] = next_token
+
+            data = await self._request("GET", endpoint, params=params)
+            records = data.get("records", [])
+            all_records.extend(records)
+
+            next_token = data.get("next_token")
+            if not next_token or not records:
+                break
+
+        return all_records[:limit]
+
     async def get_recovery(self, limit: int = 1) -> list[Recovery]:
-        """Get recent recovery records."""
-        data = await self._request("GET", "/v2/recovery", params={"limit": limit})
-        return [Recovery.model_validate(record) for record in data.get("records", [])]
+        """Get recent recovery records (supports up to 30 days via pagination)."""
+        records = await self._paginated_request("/v2/recovery", limit)
+        return [Recovery.model_validate(record) for record in records]
 
     async def get_today_recovery(self) -> Optional[Recovery]:
         """Get today's recovery data."""
@@ -123,9 +149,9 @@ class WhoopClient:
         return records[0] if records else None
 
     async def get_sleep(self, limit: int = 1) -> list[Sleep]:
-        """Get recent sleep records."""
-        data = await self._request("GET", "/v2/activity/sleep", params={"limit": limit})
-        return [Sleep.model_validate(record) for record in data.get("records", [])]
+        """Get recent sleep records (supports up to 30 days via pagination)."""
+        records = await self._paginated_request("/v2/activity/sleep", limit)
+        return [Sleep.model_validate(record) for record in records]
 
     async def get_last_sleep(self) -> Optional[Sleep]:
         """Get the most recent sleep record (main sleep, not nap)."""

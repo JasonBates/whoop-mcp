@@ -108,8 +108,8 @@ Once configured, you can ask Claude things like:
 | Tool | Description |
 |------|-------------|
 | `get_today_summary` | Today's recovery, sleep, and strain in one call |
-| `get_sleep_trend` | Sleep history for last 7-14 days |
-| `get_recovery_trend` | Recovery history for last 7-14 days |
+| `get_sleep_trend` | Sleep history for last 7-30 days |
+| `get_recovery_trend` | Recovery history for last 7-30 days |
 | `get_workouts` | Recent workouts with strain, calories, HR zones |
 
 ## Troubleshooting
