@@ -107,8 +107,7 @@ Once configured, you can ask Claude things like:
 
 | Tool | Description |
 |------|-------------|
-| `get_today_summary` | Today's recovery, sleep, and strain (text) |
-| `get_morning_briefing` | Visual dashboard banner (image) |
+| `get_today_summary` | Today's recovery, sleep, and strain in one call |
 | `get_sleep_trend` | Sleep history (default 7 days, unlimited) |
 | `get_recovery_trend` | Recovery history (default 7 days, unlimited) |
 | `get_workouts` | Workout history (default 5, unlimited) |
