@@ -172,6 +172,6 @@ class WhoopClient:
         return await self.get_recovery(limit=days)
 
     async def get_workouts(self, limit: int = 10) -> list[Workout]:
-        """Get recent workout records."""
-        data = await self._request("GET", "/v2/activity/workout", params={"limit": limit})
-        return [Workout.model_validate(record) for record in data.get("records", [])]
+        """Get recent workout records (supports pagination for full history)."""
+        records = await self._paginated_request("/v2/activity/workout", limit)
+        return [Workout.model_validate(record) for record in records]
