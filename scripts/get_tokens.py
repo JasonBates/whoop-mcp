@@ -30,7 +30,7 @@ load_dotenv(ENV_PATH)
 WHOOP_AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth"
 WHOOP_TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token"
 REDIRECT_URI = "http://localhost:8080/callback"
-SCOPES = "read:recovery read:sleep read:cycles read:profile offline"
+SCOPES = "read:recovery read:sleep read:cycles read:workout read:profile offline"
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):

@@ -9,7 +9,7 @@ from typing import Optional
 import httpx
 from dotenv import load_dotenv, set_key
 
-from whoop_mcp.models import Recovery, Sleep, Cycle
+from whoop_mcp.models import Recovery, Sleep, Cycle, Workout
 
 # Find .env file (check multiple locations)
 def find_env_file() -> Path:
@@ -144,3 +144,8 @@ class WhoopClient:
     async def get_recovery_trend(self, days: int = 7) -> list[Recovery]:
         """Get recovery trend for the last N days."""
         return await self.get_recovery(limit=days)
+
+    async def get_workouts(self, limit: int = 10) -> list[Workout]:
+        """Get recent workout records."""
+        data = await self._request("GET", "/v2/activity/workout", params={"limit": limit})
+        return [Workout.model_validate(record) for record in data.get("records", [])]

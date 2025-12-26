@@ -127,3 +127,67 @@ class Cycle(BaseModel):
     timezone_offset: str
     score_state: str
     score: Optional[CycleScore] = None
+
+
+class ZoneDurations(BaseModel):
+    """Time spent in each heart rate zone."""
+
+    zone_zero_milli: int = Field(description="Zone 0 - very light")
+    zone_one_milli: int = Field(description="Zone 1 - light")
+    zone_two_milli: int = Field(description="Zone 2 - moderate")
+    zone_three_milli: int = Field(description="Zone 3 - hard")
+    zone_four_milli: int = Field(description="Zone 4 - very hard")
+    zone_five_milli: int = Field(description="Zone 5 - max effort")
+
+    def zone_minutes(self, zone: int) -> float:
+        """Get minutes spent in a zone (0-5)."""
+        zones = [
+            self.zone_zero_milli,
+            self.zone_one_milli,
+            self.zone_two_milli,
+            self.zone_three_milli,
+            self.zone_four_milli,
+            self.zone_five_milli,
+        ]
+        return zones[zone] / (1000 * 60)
+
+
+class WorkoutScore(BaseModel):
+    """WHOOP workout score data."""
+
+    strain: float = Field(description="Workout strain 0-21")
+    average_heart_rate: int
+    max_heart_rate: int
+    kilojoule: float = Field(description="Energy in kJ")
+    percent_recorded: float = Field(description="% of workout recorded")
+    distance_meter: Optional[float] = Field(None, description="Distance in meters")
+    altitude_gain_meter: Optional[float] = Field(None, description="Altitude gained")
+    altitude_change_meter: Optional[float] = Field(None, description="Net altitude change")
+    zone_durations: ZoneDurations
+
+    @property
+    def calories(self) -> int:
+        """Calories burned."""
+        return int(self.kilojoule * 0.239)
+
+    @property
+    def distance_miles(self) -> Optional[float]:
+        """Distance in miles."""
+        if self.distance_meter:
+            return self.distance_meter / 1609.34
+        return None
+
+
+class Workout(BaseModel):
+    """WHOOP workout record."""
+
+    id: str
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    start: datetime
+    end: datetime
+    timezone_offset: str
+    sport_name: str = Field(description="Type of activity")
+    score_state: str
+    score: Optional[WorkoutScore] = None

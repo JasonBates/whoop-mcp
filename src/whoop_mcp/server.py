@@ -204,6 +204,68 @@ async def get_strain() -> str:
         return f"API error: {e}"
 
 
+@mcp.tool()
+async def get_workouts(limit: int = 5) -> str:
+    """Get recent workouts with strain and heart rate data.
+
+    Args:
+        limit: Number of workouts to return (default: 5, max: 10)
+
+    Shows your recent activities including sport type, strain,
+    duration, calories, and heart rate zones.
+    """
+    limit = min(limit, 10)
+
+    try:
+        client = WhoopClient()
+        workouts = await client.get_workouts(limit=limit)
+
+        if not workouts:
+            return "No workout data available."
+
+        lines = [f"Recent Workouts ({len(workouts)}):", ""]
+
+        for w in workouts:
+            # Calculate duration
+            duration_mins = (w.end - w.start).total_seconds() / 60
+            date = w.start.strftime("%m/%d %H:%M")
+            sport = w.sport_name.replace("_", " ").title()
+
+            if w.score_state == "SCORED" and w.score:
+                s = w.score
+                workout_line = f"• {date} - {sport} ({duration_mins:.0f}min)"
+                lines.append(workout_line)
+                lines.append(f"  Strain: {s.strain:.1f} | {s.calories} cal | Avg HR: {s.average_heart_rate} bpm")
+
+                # Show distance if available
+                if s.distance_miles:
+                    lines.append(f"  Distance: {s.distance_miles:.2f} mi")
+
+                # Show HR zones summary (just the active ones)
+                zones = s.zone_durations
+                zone_parts = []
+                if zones.zone_three_milli > 0:
+                    zone_parts.append(f"Z3: {zones.zone_minutes(3):.0f}m")
+                if zones.zone_four_milli > 0:
+                    zone_parts.append(f"Z4: {zones.zone_minutes(4):.0f}m")
+                if zones.zone_five_milli > 0:
+                    zone_parts.append(f"Z5: {zones.zone_minutes(5):.0f}m")
+                if zone_parts:
+                    lines.append(f"  Zones: {' | '.join(zone_parts)}")
+
+                lines.append("")
+            else:
+                lines.append(f"• {date} - {sport} ({duration_mins:.0f}min) [not scored]")
+                lines.append("")
+
+        return "\n".join(lines).strip()
+
+    except WhoopAuthError as e:
+        return f"Authentication error: {e}. Run the token setup script."
+    except WhoopAPIError as e:
+        return f"API error: {e}"
+
+
 # Entry point for running the server
 def main():
     """Run the MCP server."""
