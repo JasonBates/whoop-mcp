@@ -8,6 +8,7 @@ An MCP (Model Context Protocol) server that provides Claude Desktop with access 
 - **Sleep Analysis**: View sleep duration, stages (light/deep/REM), efficiency, and performance
 - **Recovery Trends**: Track your recovery over the past 7-14 days
 - **Strain Metrics**: Monitor daily strain, calories, and heart rate data
+- **Workout History**: View recent workouts with sport type, strain, calories, and HR zones
 
 ## Prerequisites
 
@@ -100,6 +101,7 @@ Once configured, you can ask Claude things like:
 - "How did I sleep last night?"
 - "Show me my recovery trend for the past week"
 - "What's my current strain?"
+- "Show me my recent workouts"
 
 ## Available Tools
 
@@ -109,6 +111,7 @@ Once configured, you can ask Claude things like:
 | `get_sleep` | Last night's sleep data with stage breakdown |
 | `get_recovery_trend` | Recovery scores for the last 7 days |
 | `get_strain` | Current day's strain score and calorie burn |
+| `get_workouts` | Recent workouts with sport, strain, calories, HR zones |
 
 ## Troubleshooting
 
