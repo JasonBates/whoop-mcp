@@ -1,5 +1,7 @@
 """WHOOP MCP Server - Expose WHOOP recovery data to Claude Desktop."""
 
+import asyncio
+
 from fastmcp import FastMCP
 
 from whoop_mcp.client import WhoopClient, WhoopAuthError, WhoopAPIError
@@ -13,6 +15,85 @@ def format_hours_minutes(hours: float) -> str:
     h = int(hours)
     m = int((hours - h) * 60)
     return f"{h}h {m}m"
+
+
+@mcp.tool()
+async def get_today_summary() -> str:
+    """Get today's complete WHOOP status: recovery, sleep, and strain in one call.
+
+    This is the recommended daily check-in tool. Returns:
+    - Recovery score with HRV and resting heart rate
+    - Last night's sleep duration and quality
+    - Current strain level and calories burned
+    """
+    try:
+        client = WhoopClient()
+
+        # Fetch all three in parallel
+        recovery_task = client.get_today_recovery()
+        sleep_task = client.get_last_sleep()
+        cycles_task = client.get_cycles(limit=1)
+
+        recovery, sleep, cycles = await asyncio.gather(
+            recovery_task, sleep_task, cycles_task
+        )
+
+        lines = ["=== WHOOP Daily Summary ===", ""]
+
+        # Recovery section
+        lines.append("RECOVERY")
+        if recovery and recovery.score_state == "SCORED" and recovery.score:
+            score = recovery.score
+            lines.append(f"  Score: {score.recovery_score}%")
+            lines.append(f"  HRV: {score.hrv_rmssd_milli:.1f}ms")
+            lines.append(f"  Resting HR: {score.resting_heart_rate}bpm")
+            if score.spo2_percentage:
+                lines.append(f"  SpO2: {score.spo2_percentage:.1f}%")
+        elif recovery and recovery.score_state != "SCORED":
+            lines.append(f"  {recovery.score_state.lower().replace('_', ' ')}")
+        else:
+            lines.append("  Not available yet")
+
+        lines.append("")
+
+        # Sleep section
+        lines.append("SLEEP")
+        if sleep and sleep.score_state == "SCORED" and sleep.score:
+            score = sleep.score
+            stages = score.stage_summary
+            total = format_hours_minutes(stages.total_sleep_hours)
+            deep = format_hours_minutes(stages.deep_sleep_hours)
+            rem = format_hours_minutes(stages.rem_sleep_hours)
+            lines.append(f"  Total: {total}")
+            lines.append(f"  Deep: {deep} | REM: {rem}")
+            if score.sleep_performance_percentage:
+                lines.append(f"  Performance: {score.sleep_performance_percentage:.0f}%")
+        elif sleep and sleep.score_state != "SCORED":
+            lines.append(f"  {sleep.score_state.lower().replace('_', ' ')}")
+        else:
+            lines.append("  Not available yet")
+
+        lines.append("")
+
+        # Strain section
+        lines.append("STRAIN")
+        if cycles and cycles[0].score_state == "SCORED" and cycles[0].score:
+            score = cycles[0].score
+            calories = int(score.kilojoule * 0.239)
+            lines.append(f"  Score: {score.strain:.1f} / 21")
+            lines.append(f"  Calories: {calories} kcal")
+            lines.append(f"  Avg HR: {score.average_heart_rate}bpm")
+        elif cycles and cycles[0].score_state != "SCORED":
+            lines.append(f"  {cycles[0].score_state.lower().replace('_', ' ')}")
+        else:
+            lines.append("  Not available yet")
+
+        return "\n".join(lines)
+
+    except WhoopAuthError as e:
+        return f"Authentication error: {e}. Run the token setup script."
+    except WhoopAPIError as e:
+        return f"API error: {e}"
 
 
 @mcp.tool()

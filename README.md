@@ -97,7 +97,7 @@ Quit and reopen Claude Desktop. You should see "whoop" in the MCP servers list.
 
 Once configured, you can ask Claude things like:
 
-- "What's my WHOOP recovery today?"
+- "What's my WHOOP status today?" (uses the combined summary)
 - "How did I sleep last night?"
 - "Show me my recovery trend for the past week"
 - "What's my current strain?"
@@ -107,6 +107,7 @@ Once configured, you can ask Claude things like:
 
 | Tool | Description |
 |------|-------------|
+| `get_today_summary` | **Recommended** - Recovery, sleep, and strain in one call |
 | `get_recovery` | Today's recovery score, HRV, RHR, SpO2 |
 | `get_sleep` | Last night's sleep data with stage breakdown |
 | `get_sleep_trend` | Sleep duration and performance for last 7 days |
