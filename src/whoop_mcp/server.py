@@ -1,8 +1,10 @@
 """WHOOP MCP Server - Expose WHOOP recovery data to Claude Desktop."""
 
 import asyncio
+import io
 
 from fastmcp import FastMCP
+from fastmcp.utilities.types import Image
 
 from whoop_mcp.client import WhoopClient, WhoopAuthError, WhoopAPIError
 
@@ -261,6 +263,87 @@ async def get_workouts(limit: int = 5) -> str:
         return f"Authentication error: {e}. Run the token setup script."
     except WhoopAPIError as e:
         return f"API error: {e}"
+
+
+@mcp.tool()
+async def get_morning_briefing() -> Image | str:
+    """Get a visual morning briefing banner with today's key WHOOP metrics.
+
+    Returns a landscape dashboard image showing recovery, HRV, sleep,
+    and strain at a glance. Designed for quick morning check-ins.
+    """
+    import matplotlib.pyplot as plt
+
+    try:
+        client = WhoopClient()
+
+        # Fetch all data in parallel
+        recovery, sleep, cycles = await asyncio.gather(
+            client.get_today_recovery(),
+            client.get_last_sleep(),
+            client.get_cycles(limit=1)
+        )
+
+        # Extract values
+        recovery_pct = recovery.score.recovery_score if recovery and recovery.score else None
+        hrv = recovery.score.hrv_rmssd_milli if recovery and recovery.score else None
+        sleep_hours = sleep.score.stage_summary.total_sleep_hours if sleep and sleep.score else None
+        strain = cycles[0].score.strain if cycles and cycles[0].score else None
+
+        # Create landscape banner (800x200)
+        fig, ax = plt.subplots(figsize=(8, 2))
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 100)
+        ax.axis('off')
+
+        # Light background
+        fig.patch.set_facecolor('#ffffff')
+        ax.set_facecolor('#ffffff')
+
+        # Recovery (large, left side, color-coded)
+        if recovery_pct is not None:
+            color = '#00a651' if recovery_pct >= 67 else '#f5a623' if recovery_pct >= 34 else '#d0021b'
+            ax.text(12, 50, f"{recovery_pct:.0f}%", fontsize=36, fontweight='bold',
+                   color=color, ha='center', va='center')
+            ax.text(12, 20, "RECOVERY", fontsize=8, color='#666', ha='center')
+
+        # HRV
+        if hrv is not None:
+            ax.text(35, 50, f"{hrv:.0f}", fontsize=24, fontweight='bold',
+                   color='#333', ha='center', va='center')
+            ax.text(35, 25, "HRV (ms)", fontsize=8, color='#666', ha='center')
+
+        # Sleep
+        if sleep_hours is not None:
+            h = int(sleep_hours)
+            m = int((sleep_hours - h) * 60)
+            ax.text(58, 50, f"{h}h {m}m", fontsize=24, fontweight='bold',
+                   color='#333', ha='center', va='center')
+            ax.text(58, 25, "SLEEP", fontsize=8, color='#666', ha='center')
+
+        # Strain
+        if strain is not None:
+            ax.text(82, 50, f"{strain:.1f}", fontsize=24, fontweight='bold',
+                   color='#0077b6', ha='center', va='center')
+            ax.text(82, 25, "STRAIN", fontsize=8, color='#666', ha='center')
+
+        plt.tight_layout(pad=0.5)
+
+        # Save to bytes
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='png', dpi=150,
+                   facecolor=fig.get_facecolor(), edgecolor='none')
+        buffer.seek(0)
+        plt.close(fig)
+
+        return Image(data=buffer.read(), format="png")
+
+    except WhoopAuthError as e:
+        return f"Authentication error: {e}. Run the token setup script."
+    except WhoopAPIError as e:
+        return f"API error: {e}"
+    except Exception as e:
+        return f"Error generating briefing: {e}"
 
 
 # Entry point for running the server
