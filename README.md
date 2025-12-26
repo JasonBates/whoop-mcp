@@ -109,6 +109,7 @@ Once configured, you can ask Claude things like:
 |------|-------------|
 | `get_recovery` | Today's recovery score, HRV, RHR, SpO2 |
 | `get_sleep` | Last night's sleep data with stage breakdown |
+| `get_sleep_trend` | Sleep duration and performance for last 7 days |
 | `get_recovery_trend` | Recovery scores for the last 7 days |
 | `get_strain` | Current day's strain score and calorie burn |
 | `get_workouts` | Recent workouts with sport, strain, calories, HR zones |
