@@ -80,10 +80,10 @@ class WhoopClient:
             self.access_token = tokens["access_token"]
             self.refresh_token = tokens.get("refresh_token", self.refresh_token)
 
-            # Save new tokens to .env
-            set_key(str(ENV_PATH), "WHOOP_ACCESS_TOKEN", self.access_token)
+            # Save new tokens to .env (quote_mode="never" prevents quote issues)
+            set_key(str(ENV_PATH), "WHOOP_ACCESS_TOKEN", self.access_token, quote_mode="never")
             if tokens.get("refresh_token"):
-                set_key(str(ENV_PATH), "WHOOP_REFRESH_TOKEN", self.refresh_token)
+                set_key(str(ENV_PATH), "WHOOP_REFRESH_TOKEN", self.refresh_token, quote_mode="never")
 
     async def _request(
         self,

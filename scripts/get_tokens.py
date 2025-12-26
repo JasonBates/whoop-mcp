@@ -115,8 +115,9 @@ def save_tokens_to_env(access_token: str, refresh_token: str):
     if not ENV_PATH.exists():
         ENV_PATH.touch()
 
-    set_key(str(ENV_PATH), "WHOOP_ACCESS_TOKEN", access_token)
-    set_key(str(ENV_PATH), "WHOOP_REFRESH_TOKEN", refresh_token)
+    # quote_mode="never" prevents quotes that can break token parsing
+    set_key(str(ENV_PATH), "WHOOP_ACCESS_TOKEN", access_token, quote_mode="never")
+    set_key(str(ENV_PATH), "WHOOP_REFRESH_TOKEN", refresh_token, quote_mode="never")
     print(f"\n✓ Tokens saved to {ENV_PATH}")
 
 
