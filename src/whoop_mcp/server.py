@@ -1,4 +1,20 @@
-"""WHOOP MCP Server - Expose WHOOP recovery data to Claude Desktop."""
+"""
+WHOOP MCP Server - Expose WHOOP health metrics to Claude Desktop.
+
+This MCP (Model Context Protocol) server provides tools for Claude to access
+WHOOP fitness tracker data including recovery scores, sleep analysis, strain
+metrics, and workout history.
+
+Available tools:
+    - get_today_summary: Daily snapshot of recovery, sleep, and strain
+    - get_sleep_trend: Multi-day sleep duration and quality analysis
+    - get_recovery_trend: Multi-day recovery and HRV patterns
+    - get_workouts: Recent workout details with HR zones
+
+Usage:
+    Run via MCP: uv run whoop-mcp
+    Configure in Claude Desktop's claude_desktop_config.json
+"""
 
 import asyncio
 
@@ -6,12 +22,19 @@ from fastmcp import FastMCP
 
 from whoop_mcp.client import WhoopClient, WhoopAuthError, WhoopAPIError
 
-# Create the MCP server
+# Initialize the FastMCP server with a display name shown in Claude Desktop
 mcp = FastMCP("WHOOP Recovery")
 
 
 def format_hours_minutes(hours: float) -> str:
-    """Format hours as 'Xh Ym'."""
+    """Convert decimal hours to human-readable 'Xh Ym' format.
+
+    Args:
+        hours: Time in decimal hours (e.g., 7.5 for 7 hours 30 minutes)
+
+    Returns:
+        Formatted string like "7h 30m"
+    """
     h = int(hours)
     m = int((hours - h) * 60)
     return f"{h}h {m}m"
@@ -29,10 +52,11 @@ async def get_today_summary() -> str:
     try:
         client = WhoopClient()
 
-        # Fetch all three in parallel
+        # Fetch recovery, sleep, and strain data concurrently for efficiency
+        # Using asyncio.gather() reduces total wait time vs sequential calls
         recovery_task = client.get_today_recovery()
         sleep_task = client.get_last_sleep()
-        cycles_task = client.get_cycles(limit=1)
+        cycles_task = client.get_cycles(limit=1)  # Most recent cycle = today's strain
 
         recovery, sleep, cycles = await asyncio.gather(
             recovery_task, sleep_task, cycles_task
@@ -41,6 +65,8 @@ async def get_today_summary() -> str:
         lines = ["=== WHOOP Daily Summary ===", ""]
 
         # Recovery section
+        # score_state can be: SCORED (data ready), PENDING_SCORE (processing),
+        # or UNSCORABLE (not enough data, e.g., WHOOP wasn't worn)
         lines.append("RECOVERY")
         if recovery and recovery.score_state == "SCORED" and recovery.score:
             score = recovery.score

@@ -27,6 +27,10 @@ def find_env_file() -> Path:
 ENV_PATH = find_env_file()
 load_dotenv(ENV_PATH)
 
+# Track when we last refreshed the token (persists across tool calls within MCP session)
+_last_token_refresh: Optional[datetime] = None
+TOKEN_LIFETIME_MINUTES = 55  # Refresh proactively before the 60-min expiry
+
 
 class WhoopAuthError(Exception):
     """Authentication error with WHOOP API."""
@@ -56,8 +60,18 @@ class WhoopClient:
                 "No access token found. Run 'uv run python scripts/get_tokens.py' first."
             )
 
+    def _token_needs_refresh(self) -> bool:
+        """Check if the token should be proactively refreshed."""
+        global _last_token_refresh
+        if _last_token_refresh is None:
+            return True  # Never refreshed this session
+        elapsed = datetime.now() - _last_token_refresh
+        return elapsed > timedelta(minutes=TOKEN_LIFETIME_MINUTES)
+
     async def _refresh_access_token(self) -> None:
         """Refresh the access token using the refresh token."""
+        global _last_token_refresh
+
         if not self.refresh_token:
             raise WhoopAuthError("No refresh token available. Re-run get_tokens.py")
 
@@ -69,7 +83,6 @@ class WhoopClient:
                     "client_id": self.client_id,
                     "client_secret": self.client_secret,
                     "refresh_token": self.refresh_token,
-                    "scope": "offline",
                 },
             )
 
@@ -79,11 +92,16 @@ class WhoopClient:
             tokens = response.json()
             self.access_token = tokens["access_token"]
             self.refresh_token = tokens.get("refresh_token", self.refresh_token)
+            _last_token_refresh = datetime.now()  # Record refresh time
 
             # Save new tokens to .env (quote_mode="never" prevents quote issues)
             set_key(str(ENV_PATH), "WHOOP_ACCESS_TOKEN", self.access_token, quote_mode="never")
             if tokens.get("refresh_token"):
                 set_key(str(ENV_PATH), "WHOOP_REFRESH_TOKEN", self.refresh_token, quote_mode="never")
+
+            # Also update in-memory env vars so new WhoopClient instances get fresh tokens
+            os.environ["WHOOP_ACCESS_TOKEN"] = self.access_token
+            os.environ["WHOOP_REFRESH_TOKEN"] = self.refresh_token
 
     async def _request(
         self,
@@ -93,13 +111,17 @@ class WhoopClient:
         retry_on_401: bool = True,
     ) -> dict:
         """Make an authenticated request to the WHOOP API."""
+        # Proactively refresh if token is stale (avoids wasted 401 round-trip)
+        if self._token_needs_refresh():
+            await self._refresh_access_token()
+
         url = f"{self.BASE_URL}{endpoint}"
         headers = {"Authorization": f"Bearer {self.access_token}"}
 
         async with httpx.AsyncClient() as client:
             response = await client.request(method, url, headers=headers, params=params)
 
-            # Handle token expiration
+            # Fallback: handle unexpected token expiration
             if response.status_code == 401 and retry_on_401:
                 await self._refresh_access_token()
                 return await self._request(method, endpoint, params, retry_on_401=False)
