@@ -68,6 +68,15 @@ class WhoopClient:
         elapsed = datetime.now() - _last_token_refresh
         return elapsed > timedelta(minutes=TOKEN_LIFETIME_MINUTES)
 
+    async def ensure_fresh_token(self) -> None:
+        """Ensure token is fresh before making concurrent requests.
+
+        Call this once before asyncio.gather() to avoid race conditions
+        where multiple concurrent requests all try to refresh simultaneously.
+        """
+        if self._token_needs_refresh():
+            await self._refresh_access_token()
+
     async def _refresh_access_token(self) -> None:
         """Refresh the access token using the refresh token."""
         global _last_token_refresh

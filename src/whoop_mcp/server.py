@@ -52,6 +52,10 @@ async def get_today_summary() -> str:
     try:
         client = WhoopClient()
 
+        # Ensure token is fresh BEFORE concurrent calls to avoid race condition
+        # where all 3 requests try to refresh simultaneously
+        await client.ensure_fresh_token()
+
         # Fetch recovery, sleep, and strain data concurrently for efficiency
         # Using asyncio.gather() reduces total wait time vs sequential calls
         recovery_task = client.get_today_recovery()
